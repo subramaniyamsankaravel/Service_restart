@@ -1,0 +1,176 @@
+#!/bin/sh
+# Purpose: stop all running services to prepare for OS patching
+
+NOW=`date '+%Y-%m-%d %H:%M:%S'`
+
+log=<path_of_log_file>/services_stop.log
+
+echo "--------stopping services on $NOW -------------" >> ${log}
+
+#commenting crontab job
+service_crontab=`crontab -l | grep servicemonitor.sh | grep -i "#" | grep -v grep | wc -l`
+    if [ $service_crontab =  0 ]; then
+            echo "Commenting Service Monitor Crontab" >> ${log}
+            crontab -l | sed  -e '/servicemonitor.sh/ s/*/#/;' | crontab -
+          else
+             echo "Service monitor crontab entry is already commented." >> ${log}
+    fi
+
+diskspace_crontab=`crontab -l | grep diskspace_monitor.sh | grep -i "#" | grep -v grep | wc -l`
+    if [ $diskspace_crontab =  0 ]; then
+            echo "Commenting Diskspace Monitor Crontab" >> ${log}
+            crontab -l | sed  -e '/diskspace_monitor.sh/ s/*/#/;' | crontab -
+          else
+             echo "Diskspace monitor crontab entry is already commented." >> ${log}
+    fi
+
+echo "cronjob entry commented" >> ${log}
+
+#stopping MySQL
+
+mysql_ser=`systemctl status mysql | grep -i "active (exited)" | grep -v grep | wc -l`
+if [ $mysql_ser =  1 ]; then
+             echo "Stopping MySQL." >> ${log}
+             systemctl stop mysql
+             sleep 5
+             while [ "`systemctl status mysql | grep -i "active (exited)" | grep -v grep | wc -l`" -ge 1 ]
+                do
+                         echo " MySQL is still running." >> ${log}
+                         systemctl stop mysql
+                         sleep 2
+                 done
+            echo " MySQL stopped successfully." >> ${log}
+      else
+         echo "MySQL was not running." >> ${log}
+fi
+
+#stopping apache
+
+apache_ser=`systemctl status apache2 | grep -i "active (running)" | grep -v grep | wc -l`
+if [ $apache_ser =  1 ]; then
+             echo "Stopping Apache." >> ${log}
+             systemctl stop apache2
+             sleep 5
+             while [ "`systemctl status apache2 | grep -i "active (running)" | grep -v grep | wc -l`" -ge 1 ]
+                do
+                         echo " Apache is still running." >> ${log}
+                         systemctl stop apache2
+                         sleep 2
+                 done
+            echo " Apache stopped successfully." >> ${log}
+      else
+         echo "Apache was not running." >> ${log}
+fi
+
+#stopping tomcat services
+
+
+Service1_RUNNING=`ps -fe |grep "<path_of_service1>" | grep -v grep | awk '{print $2}' | wc -l`
+Service1_PID=`ps -fe |grep "<path_of_Service1>" | grep -v grep | awk '{print $2}'`
+if [ $Service1_RUNNING -gt 0 ]; then
+        su -c <path_of_Service1>/tomcat/bin/shutdown.sh <appuser_of_Service1>
+        sleep 5
+        Service1_RUNNING=`ps -fe |grep "<path_of_Service1>" | grep -v grep | awk '{print $2}' | wc -l`
+        Service1_PID=`ps -fe |grep "<path_of_Service1>" | grep -v grep | awk '{print $2}'`
+        if [ $Service1_RUNNING -gt 0 ]; then
+            echo "Force killing Tomcat !" >> ${log}
+            kill -9 $Sevice1_PID
+          else
+             echo "Service1 stopped successfully !" >> ${log}
+        fi
+    else
+             echo "Service1 is not running !" >> ${log}
+fi
+
+#echo " Service1 stopped successfully." >> ${log}
+
+Service2_RUNNING=`ps -fe |grep "<path_of_Service2>" | grep -v grep | awk '{print $2}' | wc -l`
+Service2_PID=`ps -fe |grep "<path_of_Service2>" | grep -v grep | awk '{print $2}'`
+if [ $Service2_RUNNING -gt 0 ]; then
+        su -c <path_of_Service2>/tomcat/bin/shutdown.sh <appuser_of_Service2>
+        sleep 5
+        Service2_RUNNING=`ps -fe |grep "<path_of_Service2>" | grep -v grep | awk '{print $2}' | wc -l`
+        Service2_PID=`ps -fe |grep "<path_of_Service2>" | grep -v grep | awk '{print $2}'`
+        if [ $Service2_RUNNING -gt 0 ]; then
+            echo "Force killing Tomcat !" >> ${log}
+            kill -9 $Service2_PID
+          else
+             echo "Service2 stopped successfully !" >> ${log}
+        fi
+    else
+             echo "Service2 is not running !" >> ${log}
+fi
+
+#echo " Service2 stopped successfully." >> ${log}
+
+jira_RUNNING=`ps -fe |grep "<path_of_jira>" | grep -v grep | awk '{print $2}' | wc -l`
+jira_PID=`ps -fe |grep "<path_of_jira>" | grep -v grep | awk '{print $2}'`
+if [ $jira_RUNNING -gt 0 ]; then
+        su -c <path_of_jira>/bin/stop-jira.sh <appuser_of_jira>
+        sleep 10
+        jira_RUNNING=`ps -fe |grep "<path_of_jira>" | grep -v grep | awk '{print $2}' | wc -l`
+        jira_PID=`ps -fe |grep "<path_of_jira>" | grep -v grep | awk '{print $2}'`
+        if [ $jira_RUNNING -gt 0 ]; then
+            echo "You should Force kill JIRA Process !" >> ${log}
+            kill -9 $jira_PID
+          else
+             echo "JIRA stopped successfully !" >> ${log}
+        fi
+    else
+             echo "JIRA is not running !" >> ${log}
+fi
+
+#echo " JIRA stopped successfully." >> ${log}
+
+Service3_RUNNING=`ps -fe |grep "<path_of_Service3>" | grep -v grep | awk '{print $2}' | wc -l`
+Service3_PID=`ps -fe |grep "<path_of_Service3>" | grep -v grep | awk '{print $2}'`
+if [ $Service3_RUNNING -gt 0 ]; then
+        su -c <path_of_Service3>/tomcat/bin/shutdown.sh <appuser_of_Service3>
+        sleep 5
+        Service3_RUNNING=`ps -fe |grep "<path_of_Service3>" | grep -v grep | awk '{print $2}' | wc -l`
+        Service3_PID=`ps -fe |grep "<path_of_Service3>" | grep -v grep | awk '{print $2}'`
+        if [ $Service3_RUNNING -gt 0 ]; then
+            echo "Force killing Tomcat !" >> ${log}
+            kill -9 $Service3_PID
+          else
+             echo "Service3 stopped successfully !" >> ${log}
+        fi
+    else
+             echo "Service3 is not running !" >> ${log}
+fi
+
+Service4_RUNNING=`ps -fe |grep "<path_of_Service4>" | grep -v grep | awk '{print $2}' | wc -l`
+Service4_PID=`ps -fe |grep "<path_of_Service4>" | grep -v grep | awk '{print $2}'`
+if [ $Service4_RUNNING -gt 0 ]; then
+        su -c <path_of_Service4>/shutdown.sh <appuser_of_Service4>
+        sleep 5
+        Service4_RUNNING=`ps -fe |grep "<path_of_Service4>" | grep -v grep | awk '{print $2}' | wc -l`
+        Service4_PID=`ps -fe |grep "<path_of_Service4>" | grep -v grep | awk '{print $2}'`
+        if [ $Service4_RUNNING -gt 0 ]; then
+            echo "Force killing Tomcat !" >> ${log}
+            kill -9 $Service4_PID
+          else
+             echo "Service4 stopped successfully !" >> ${log}
+        fi
+    else
+             echo "Service4 is not running !" >> ${log}
+fi
+
+Service5_RUNNING=`ps -fe |grep "<path_of_Service5>" | grep -v grep | awk '{print $2}' | wc -l`
+Service5_PID=`ps -fe |grep "<path_of_Service5>" | grep -v grep | awk '{print $2}'`
+if [ $Service5_RUNNING -gt 0 ]; then
+        su -c <path_of_Service5>/bin/stop-jira.sh <appuser_of_Service5>
+        sleep 10
+        Service5_RUNNING=`ps -fe |grep "<path_of_Service5>" | grep -v grep | awk '{print $2}' | wc -l`
+        Service5_PID=`ps -fe |grep "<path_of_Service5>" | grep -v grep | awk '{print $2}'`
+        if [ $Service5_RUNNING -gt 0 ]; then
+            echo "You should Force kill Service5 Process !" >> ${log}
+            kill -9 $Service5_PID
+          else
+             echo "Service5 stopped successfully !" >> ${log}
+        fi
+    else
+             echo "Service5 is not running !" >> ${log}
+fi
+
+echo " ------------- Services stopped ---------" >> ${log}
